@@ -3,7 +3,7 @@
 ## Installation
 
 
-
+#### install python venv and nginx 
 ```sh
 sudo apt update && sudo apt upgrade -y
 sudo apt -y install build-essential python3-venv python3-dev libpq-dev nginx
@@ -11,7 +11,7 @@ sudo apt -y install build-essential python3-venv python3-dev libpq-dev nginx
 
 
 
->  allow nginx, create project folder and conf file. 
+#### allow nginx, create project folder and conf file. 
 ```sh
 sudo ufw allow 'Nginx Full'
 mkdir -p /var/www/dcna
@@ -21,7 +21,7 @@ sudo adduser django
 sudo usermod -aG django www-data
 ```
 
->  create user, venv, django and packages
+#### create user, venv, django and packages
 ```sh
 cd /var/www/dcna
 chown -R django:www-data .
@@ -33,14 +33,14 @@ pip install django gunicorn scipy concurrent_log_handler py4cytoscape pandas num
 zip -r backup.zip .
 ```
 
->  create gunicorn service
+#### create gunicorn service
 ```sh
 sudo nano /etc/systemd/system/gunicorn.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now gunicorn.service
 ```
 
->  install SSL
+#### install SSL
 ```sh
 sudo snap install core; sudo snap refresh core
 sudo apt-get remove certbot
@@ -50,7 +50,7 @@ certbot --nginx --redirect -d dcna.computationalbiology.org -m mail@hotmail.com 
 #sudo certbot delete --cert-name example.com
 ```
 
-> install remote desktop
+#### install remote desktop
 ```sh
 sudo apt -y install xrdp
 sudo adduser xrdp ssl-cert
@@ -58,7 +58,7 @@ sudo ufw allow 3389
 sudo apt install xfce4
 ```
 
-> install xfce desktop
+#### install xfce desktop
 ```sh
 change desktop to xfce4
 sudo update-alternatives --config x-session-manager
@@ -66,11 +66,11 @@ sudo update-alternatives --config x-session-manager
 
 
 
-## Conf Files
+# Conf Files
 
 
->  nginx conf with gunicorn
-```sh
+#### nginx conf with gunicorn
+```
 server {
 
 server_name dcna.computationalbiology.org;
@@ -134,8 +134,8 @@ server_name dcna.computationalbiology.org;
 ```
 
 
->django settings.py for static files
-```sh
+#### django settings.py for static files
+```
 ALLOWED_HOSTS = ['127.0.0.1','IP','DOMAIN','localhost']
 
 STATIC_DIR = os.path.join(BASE_DIR, 'static')
@@ -149,4 +149,21 @@ urlpatterns = [
     ...
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 ```
+
+
+
+#### domain.conf
+```
+server {
+	listen 80;
+	server_name computationalbiology.org www.computationalbiology.org;
+	root /var/www/cbl;
+
+	location / {
+	   try_files $uri $uri/ =404;
+	}
+}
+````
+
+
 
