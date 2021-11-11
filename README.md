@@ -1,1 +1,152 @@
-# deploy-django-project-to-ubuntu-nginx
+# Deploy Django Project to Ubuntu-Nginx Server
+
+## Installation
+
+
+
+```sh
+sudo apt update && sudo apt upgrade -y
+sudo apt -y install build-essential python3-venv python3-dev libpq-dev nginx
+```
+
+
+
+>  allow nginx, create project folder and conf file. 
+```sh
+sudo ufw allow 'Nginx Full'
+mkdir -p /var/www/dcna
+sudo nano /etc/nginx/sites-available/dcna.conf
+sudo ln -s /etc/nginx/sites-available/dcna.conf /etc/nginx/sites-enabled/dcna.conf
+sudo adduser django
+sudo usermod -aG django www-data
+```
+
+>  create user, venv, django and packages
+```sh
+cd /var/www/dcna
+chown -R django:www-data .
+sudo su django
+python3 -m venv venv
+. venv/bin/activate
+pip install --upgrade pip
+pip install django gunicorn scipy concurrent_log_handler py4cytoscape pandas numpy openpyxl xlsxwriter gevent
+zip -r backup.zip .
+```
+
+>  create gunicorn service
+```sh
+sudo nano /etc/systemd/system/gunicorn.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now gunicorn.service
+```
+
+>  install SSL
+```sh
+sudo snap install core; sudo snap refresh core
+sudo apt-get remove certbot
+sudo snap install --classic certbot
+sudo ln -s /snap/bin/certbot /usr/bin/certbot
+certbot --nginx --redirect -d dcna.computationalbiology.org -m mail@hotmail.com --agree-tos
+#sudo certbot delete --cert-name example.com
+```
+
+> install remote desktop
+```sh
+sudo apt -y install xrdp
+sudo adduser xrdp ssl-cert
+sudo ufw allow 3389
+sudo apt install xfce4
+```
+
+> install xfce desktop
+```sh
+change desktop to xfce4
+sudo update-alternatives --config x-session-manager
+```
+
+
+
+## Conf Files
+
+
+>  nginx conf with gunicorn
+```sh
+server {
+
+server_name dcna.computationalbiology.org;
+
+# Process static file requests
+location /static/ {
+    root /var/www/dcna;
+
+    # Set expiration of assets to MAX for caching
+    expires max;
+}
+
+location  /uploads/ {
+	root /var/www/dcna;
+}
+
+
+# Deny accesses to the virtual environment directory
+location /venv {
+    return 444;
+}
+
+# Pass regular requests to Gunicorn
+location / {
+    # set the correct HTTP headers for Gunicorn
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Host $http_host;
+
+    # we don't want nginx trying to do something clever with
+    # redirects, we set the Host: header above already.
+    proxy_redirect off;
+
+    # turn off the proxy buffering to handle streaming request/responses
+    # or other fancy features like Comet, Long polling, or Web sockets.
+    proxy_buffering off;
+
+    proxy_pass http://127.0.0.1:8000;
+}
+
+    listen [::]:443 ssl ipv6only=on; # managed by Certbot
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/dcna.computationalbiology.org/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/dcna.computationalbiology.org/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+}
+server {
+    if ($host = dcna.computationalbiology.org) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+listen 80;
+listen [::]:80;
+
+server_name dcna.computationalbiology.org;
+    return 404; # managed by Certbot
+}
+```
+
+
+>django settings.py for static files
+```sh
+ALLOWED_HOSTS = ['127.0.0.1','IP','DOMAIN','localhost']
+
+STATIC_DIR = os.path.join(BASE_DIR, 'static')
+STATIC_URL = '/static/'
+STATIC_ROOT = '/var/www/dcna/static/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'uploads').replace('\\', '/')
+MEDIA_URL = '/uploads/'
+
+>django urls.py for static files
+urlpatterns = [
+    ...
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+```
+
