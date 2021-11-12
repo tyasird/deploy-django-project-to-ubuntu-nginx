@@ -50,7 +50,7 @@ certbot --nginx --redirect -d dcna.computationalbiology.org -m mail@hotmail.com 
 #sudo certbot delete --cert-name example.com
 ```
 
-#### install remote desktop
+#### install remote desktop and xfce
 ```sh
 sudo apt -y install xrdp
 sudo adduser xrdp ssl-cert
@@ -58,9 +58,8 @@ sudo ufw allow 3389
 sudo apt install xfce4
 ```
 
-#### install xfce desktop
+#### change desktop
 ```sh
-change desktop to xfce4
 sudo update-alternatives --config x-session-manager
 ```
 
@@ -282,4 +281,30 @@ server {
 	}
 	
 }
+```
+
+
+#### service file
+```
+[Unit]
+Description=Gunicorn for the Django example project
+After=network.target
+
+[Service]
+Type=notify
+
+# the specific user that our service will run as
+User=django
+Group=django
+
+RuntimeDirectory=gunicorn_example
+WorkingDirectory=/home/django/project_root
+ExecStart=/home/django/project_root/.venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 config.wsgi
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
 ```
